@@ -3,18 +3,27 @@ import numpy as np
 import random, time, sys, os
 from PIL import Image
 
+def save_image(path, image, make_directory=True):
+    assert(image.dtype in [np.uint8, np.float32, np.float64])
+
+    if image.dtype in [np.float32, np.float64]:
+        image = np.clip(image*255, 0, 255).astype(np.uint8)
+
+    if make_directory:
+        directory, _ = os.path.split(path)
+        os.makedirs(directory, exist_ok=True)
+
+    image = Image.fromarray(image)
+    image.save(path)
+
 cam_id = 0
 
 def main():
     cam = cv2.VideoCapture(cam_id)
 
     try:
-        i_frame = 0
         a = None
         b = None
-        s = None
-        n_images = 0
-        record = False
         while True:
             ok, image = cam.read()
 
@@ -28,13 +37,9 @@ def main():
             if a is None:
                 a = image
                 b = image
-                s = image
-                n_images = 1
             else:
                 a = np.minimum(a, image)
                 b = np.maximum(b, image)
-                s += image
-                n_images += 1
                 alpha = 1.0 - (b - a).mean(axis=2)
 
                 preview = np.concatenate([
@@ -53,6 +58,12 @@ def main():
             if key == ord('r'):
                 print("reset")
                 a = None
+
+            if key == ord('s'):
+                name = time.strftime("%Y-%m-%d-%H-%M-%S")
+                path = f"alpha/{name}.png"
+                save_image(path, alpha)
+                print("saved image", path)
 
             if key == ord('q') or key == 27:
                 print("quit")
